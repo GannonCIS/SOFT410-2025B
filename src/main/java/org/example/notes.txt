@@ -1,2 +1,66 @@
 REFACTORING WORK
 
+SMELLS
+REPEATED CODE in account.java
+DEPOSIT AND WITHDRAW need to
+TOO MANY SWITCHES IN OptionMenu
+FEATURE ENVY/OVERSIZED/DYSFUNCTIONAL- TWO DIFFERENT ACCOUNT TYPES, no difference, account will have saving and checking
+
+OptionMenu should create intstances of account, not extend ATM should be constructed
+Customers should be defined in a database, not the GUI
+
+MAINT
+rn, there is just a single account that multiple users can ACCESS, EACH USER SHOULD HAVE THERE OWN ACCOUNT. 
+Credentials initialized inside of a loop
+
+
+
+Plan to implement the corrections — concise, prioritized tasks with files, approach, and a small corrective patch you can apply immediately.
+
+Corrective task (high priority, small)
+Goal: fix login bug (credentials re-initialized inside loop), robust input handling, and fix saving-menu default case.
+Files: OptionMenu.java
+Actions:
+Move predefined credentials to a constructor or static initializer.
+Replace do/try with a clear while loop and handle non-numeric input by clearing the scanner token and continuing.
+Make menu fields private/final.
+Fix getSaving() default branch to re-prompt saving menu.
+Estimated effort: 30–60 minutes.
+Tests: manual console run to verify login, invalid input, and saving-menu default behavior.
+Patch (apply immediately)
+
+Perfective task A (high priority, medium effort)
+Goal: remove misuse of inheritance (OptionMenu extends Account) — use composition.
+Files: OptionMenu.java, ATM.java, maybe Account.java
+Actions:
+Change OptionMenu to no longer extend Account; instead hold an Account instance (or two: checking/saving or one Account with balances).
+Update calls to getCheckingBalance(), deposit/withdraw methods to call through account instance or AccountService.
+Update ATM.main to construct Account(s) and inject into OptionMenu.
+Estimated effort: 2–4 hours.
+Tests: unit tests for menu logic (mock Scanner/IO) and manual flows.
+
+
+Perfective task B (medium priority, medium effort)
+Goal: decouple IO and data storage for testability; migrate monetary values to BigDecimal.
+Files: Account.java, OptionMenu.java, new files: AuthenticationRepository, InMemoryAuthRepository, ConsoleIODriver (or inject Scanner/PrintStream)
+Actions:
+Create AuthenticationRepository interface and InMemoryAuthRepository implementation; inject into OptionMenu.
+Inject Scanner (or an IO abstraction) into OptionMenu and Account so tests can mock IO.
+Replace double balances with BigDecimal in Account, update arithmetic and formatting using NumberFormat or BigDecimal APIs.
+Estimated effort: 4–8 hours.
+Tests: unit tests for Account operations using BigDecimal, unit tests for authentication repository, and menu controller tests with mocked IO.
+Additional improvements (optional / later)
+Replace recursive menu calls with a central loop or State pattern (improves stack safety).
+Add logging instead of printing exceptions to console.
+Hash/salt PINs in repository (security).
+Add unit tests and CI pipeline.
+Suggested implementation order
+
+Apply the corrective patch above and run the app to stabilize behavior.
+Implement composition refactor (Perfective A) — this reduces design smell and makes later changes easier.
+Implement IO and repository abstractions and BigDecimal migration (Perfective B).
+Add unit tests and CI.
+If you want, I can:
+
+scaffold AuthenticationRepository + InMemoryAuthRepository and refactor OptionMenu to use composition (next step), or
+create unit tests for Account after migrating balances to BigDecimal
