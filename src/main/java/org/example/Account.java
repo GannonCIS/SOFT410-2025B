@@ -1,24 +1,28 @@
 package org.example;
 
 import java.text.DecimalFormat;
-import java.util.Scanner;
+
+
+
 
 public class Account {
     //variables
-    private String accountType;
-    private int customerNumber;
-    private double accountBalance = 0;
+    private final AccountType accountType;
+    private final int customerNumber;
+    private final int accountNumber;
+    private double accountBalance;
     DecimalFormat moneyFormat = new DecimalFormat("'$'###,##0.00");
 
     //constructor
-    public Account(String accountType){
-        this.accountType = accountType;
+    public Account(int customerNumber, int accountNumber, AccountType type, double startingBalance) {
+        this.customerNumber = customerNumber;
+        this.accountType = type;
+        this.accountBalance = startingBalance;
+        this.accountNumber = accountNumber;
     }
 
     //getters
-    public void setCustomerNumber(int customerNumber){
-        this.customerNumber = customerNumber;
-    }
+    public int getAccountNumber() {return accountNumber;}
 
     public int getCustomerNumber(){
         return customerNumber;
@@ -26,7 +30,7 @@ public class Account {
 
     public double getAccountBalance(){return accountBalance;}
 
-    public String getAccountType(){return accountType;}
+    public AccountType getAccountType(){return accountType;}
 
     //input validation should be in the GUI, as well as output (must be a number and positive), only logic to make sure transaction woln't bounce goes here
     //deposit money into account
