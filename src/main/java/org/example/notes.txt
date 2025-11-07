@@ -1,5 +1,8 @@
 REFACTORING WORK
 
+Code Smells
+
+
 SMELLS
 REPEATED CODE in account.java
 DEPOSIT AND WITHDRAW need to

@@ -1,17 +1,11 @@
 package org.example;
 
-import java.text.DecimalFormat;
-
-
-
-
 public class Account {
     //variables
     private final AccountType accountType;
     private final int customerNumber;
     private final int accountNumber;
     private double accountBalance;
-    DecimalFormat moneyFormat = new DecimalFormat("'$'###,##0.00");
 
     //constructor
     public Account(int customerNumber, int accountNumber, AccountType type, double startingBalance) {
