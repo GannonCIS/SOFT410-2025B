@@ -108,11 +108,6 @@ public final class AppConfig {
             return new TransferResult(from.getAccountBalance(), to.getAccountBalance());
         }
 
-        @Override
-        public int openAccount(int customerNumber, AccountType type, double initialDeposit) {
-            throw new UnsupportedOperationException("ATM cannot open accounts");
-        }
-
         private static void requirePositiveFinite(double v) {
             if (v <= 0.0 || Double.isNaN(v) || Double.isInfinite(v)) {
                 throw new IllegalArgumentException("Amount must be positive and finite");
