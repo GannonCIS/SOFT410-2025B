@@ -16,7 +16,7 @@ import java.sql.Statement;
 import java.util.Optional;
 import oracle.ucp.jdbc.PoolDataSourceFactory;
 import oracle.ucp.jdbc.PoolDataSource;
-
+import java.util.logging.Logger;
 /**
  * Utility class that bootstraps a UCP pool for the Oracle Autonomous Database.
  * <p>
@@ -36,9 +36,10 @@ public class OracleDBUtil {
     private static final String ENV_DB_PASSWORD = "DB_PASSWORD";
     private static final String ENV_DB_CONNECT_DESCRIPTOR = "DB_CONNECT_DESCRIPTOR";
     private static final String ENV_DB_TNS_ALIAS = "DB_TNS_ALIAS";
-    private static final String ENV_TNS_ADMIN = "TNS_ADMIN";
+    private static final String ENV_TNS_ADMIN = "src/main/Wallet_A92L3F0AB96RM7KR";
     private final static String CONN_FACTORY_CLASS_NAME = "oracle.jdbc.replay.OracleConnectionPoolDataSourceImpl";
     private PoolDataSource poolDataSource;
+    private static final Logger logger = Logger.getLogger(OracleDBUtil.class.getName());
     public OracleDBUtil() throws SQLException {
         this.poolDataSource = PoolDataSourceFactory.getPoolDataSource();
         poolDataSource.setConnectionFactoryClassName(CONN_FACTORY_CLASS_NAME);
@@ -46,6 +47,8 @@ public class OracleDBUtil {
         poolDataSource.setUser(resolveEnvOrDefault(ENV_DB_USER, DEFAULT_DB_USER));
         poolDataSource.setPassword(resolveEnvOrDefault(ENV_DB_PASSWORD, DEFAULT_DB_PASSWORD));
         poolDataSource.setConnectionPoolName("JDBC_UCP_POOL");
+        logger.info("Database connection initialized with URL: " + poolDataSource.getURL());
+        logger.info("Database user: " + poolDataSource.getUser());
     }
 
     private static String buildJdbcUrl() {

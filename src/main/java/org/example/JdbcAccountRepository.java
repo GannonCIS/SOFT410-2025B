@@ -9,11 +9,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-
+import org.example.AccountRepository;
 /**
  * JDBC-backed implementation of account persistence.
  */
-public class JdbcAccountRepository implements OptionMenu.AccountRepository, AccountRepository {
+public class JdbcAccountRepository implements AccountRepository {
 
     private static final String SQL_FIND_ALL =
             "SELECT ACCOUNTNUMBER, ACCOUNTTYPE, ACCOUNTBALANCE " +
