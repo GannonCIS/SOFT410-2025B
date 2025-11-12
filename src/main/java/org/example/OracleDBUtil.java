@@ -43,9 +43,13 @@ public class OracleDBUtil {
         poolDataSource.setPassword(DB_PASSWORD);
         poolDataSource.setConnectionPoolName("JDBC_UCP_POOL");
     }
+    public Connection getConnection() throws SQLException {
+        return poolDataSource.getConnection();
+    }
+
     public void testConnection() {
         try {
-            try (Connection conn = poolDataSource.getConnection();
+            try (Connection conn = getConnection();
                  Statement stmt = conn.createStatement();
                  ResultSet rs = stmt.executeQuery("SELECT 1 FROM DUAL")) {
                 if (rs.next()) {
