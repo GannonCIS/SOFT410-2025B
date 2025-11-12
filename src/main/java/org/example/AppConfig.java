@@ -1,7 +1,15 @@
 package org.example;
 
-import java.util.*;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Central place to wire dependencies.
@@ -27,6 +35,18 @@ public final class AppConfig {
         return new ATM(auth, accounts, service);
     }
 
+    /** Build an ATM backed by the Oracle database. */
+    public static ATM prodATM() {
+        try {
+            var auth = new InMemoryAuthRepo();
+            var accounts = new JdbcAccountRepository(new OracleDBUtil());
+            var service = new SimpleAccountService(accounts);
+            return new ATM(auth, accounts, service);
+        } catch (SQLException ex) {
+            throw new IllegalStateException("Unable to configure production ATM", ex);
+        }
+    }
+
     // ==================== In-memory repositories ====================
 
     /** In-memory Authentication (PINs as plain ints for demo). */
@@ -39,14 +59,16 @@ public final class AppConfig {
     }
 
     /** In-memory Account repo (thread-safe maps). */
-    static class InMemoryAccountRepo implements OptionMenu.AccountRepository {
+    static class InMemoryAccountRepo implements OptionMenu.AccountRepository, AccountRepository {
         private final Map<Integer, Account> byNo = new ConcurrentHashMap<>();
         private final Map<Integer, Set<Integer>> byCustomer = new ConcurrentHashMap<>();
+        private final AtomicInteger nextAccountNumber = new AtomicInteger(2000);
 
         void seed(Account a) {
             byNo.put(a.getAccountNumber(), a);
             byCustomer.computeIfAbsent(a.getCustomerNumber(), k -> new LinkedHashSet<>())
                     .add(a.getAccountNumber());
+            nextAccountNumber.accumulateAndGet(a.getAccountNumber(), Math::max);
         }
 
         @Override public List<Account> findAllByCustomer(int customerNumber) {
@@ -63,60 +85,20 @@ public final class AppConfig {
             var a = byNo.get(accountNumber);
             return (a != null && a.getCustomerNumber() == customerNumber) ? a : null;
         }
-    }
-
-    // ==================== Service (uses your existing AccountService interface) ====================
-
-    /** Simple service: validates, loads fresh from repo, mutates, returns new balances. */
-    static class SimpleAccountService implements AccountService {
-        private final OptionMenu.AccountRepository accounts;
-
-        SimpleAccountService(OptionMenu.AccountRepository accounts) {
-            this.accounts = Objects.requireNonNull(accounts);
+        @Override public void save(Account account) {
+            Objects.requireNonNull(account, "account");
+            byNo.put(account.getAccountNumber(), account);
+            byCustomer.computeIfAbsent(account.getCustomerNumber(), k -> new LinkedHashSet<>())
+                    .add(account.getAccountNumber());
         }
 
-        @Override
-        public double deposit(int customerNumber, int accountNumber, double amount) {
-            requirePositiveFinite(amount);
-            var a = accounts.findOneForCustomer(customerNumber, accountNumber);
-            if (a == null) throw new IllegalArgumentException("Account not found for this customer");
-            if (!a.deposit(amount)) throw new IllegalArgumentException("Deposit rejected");
-            return a.getAccountBalance();
-        }
-
-        @Override
-        public double withdraw(int customerNumber, int accountNumber, double amount) {
-            requirePositiveFinite(amount);
-            var a = accounts.findOneForCustomer(customerNumber, accountNumber);
-            if (a == null) throw new IllegalArgumentException("Account not found for this customer");
-            if (!a.withdraw(amount)) throw new IllegalStateException("Insufficient funds");
-            return a.getAccountBalance();
-        }
-
-        @Override
-        public TransferResult transfer(int customerNumber, int fromAccount, int toAccount, double amount) {
-            requirePositiveFinite(amount);
-            if (fromAccount == toAccount) throw new IllegalArgumentException("Cannot transfer to the same account");
-
-            var from = accounts.findOneForCustomer(customerNumber, fromAccount);
-            var to   = accounts.findOneForCustomer(customerNumber, toAccount);
-            if (from == null || to == null) throw new IllegalArgumentException("Account not found for this customer");
-
-            if (!from.withdraw(amount)) throw new IllegalStateException("Insufficient funds");
-            if (!to.deposit(amount)) { from.deposit(amount); throw new IllegalStateException("Deposit failed"); }
-
-            return new TransferResult(from.getAccountBalance(), to.getAccountBalance());
-        }
-
-        @Override
-        public int openAccount(int customerNumber, AccountType type, double initialDeposit) {
-            throw new UnsupportedOperationException("ATM cannot open accounts");
-        }
-
-        private static void requirePositiveFinite(double v) {
-            if (v <= 0.0 || Double.isNaN(v) || Double.isInfinite(v)) {
-                throw new IllegalArgumentException("Amount must be positive and finite");
-            }
+        @Override public int create(int customerNumber, AccountType type, long initialCents) {
+            Objects.requireNonNull(type, "type");
+            int accountNumber = nextAccountNumber.incrementAndGet();
+            double balance = initialCents / 100.0;
+            Account account = new Account(customerNumber, accountNumber, type, balance);
+            save(account);
+            return accountNumber;
         }
     }
 }
