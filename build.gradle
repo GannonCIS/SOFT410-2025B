@@ -7,13 +7,22 @@ version = '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
+    maven {
+        url "https://maven.oracle.com"
+        credentials {
+            username = System.getenv("ORACLE_MAVEN_USERNAME") // Oracle Maven username
+            password = System.getenv("ORACLE_MAVEN_PASSWORD") // Oracle Maven password
+        }
+    }
 }
 
-dependencies {
-    testImplementation platform('org.junit:junit-bom:5.9.1')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-}
+    dependencies {
+        testImplementation platform('org.junit:junit-bom:5.9.1')
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+        implementation('com.oracle.database.jdbc:ojdbc11:19.18.0.0')
+        implementation 'com.oracle.database.jdbc:ucp:21.9.0.0'
+    }
 
-test {
-    useJUnitPlatform()
-}
+    test {
+        useJUnitPlatform()
+    }
