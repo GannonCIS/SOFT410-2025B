@@ -43,6 +43,10 @@ public class OracleDBUtil {
         poolDataSource.setPassword(DB_PASSWORD);
         poolDataSource.setConnectionPoolName("JDBC_UCP_POOL");
     }
+
+    public Connection getConnection() throws SQLException {
+        return poolDataSource.getConnection();
+    }
     public void testConnection() {
         try {
             try (Connection conn = poolDataSource.getConnection();
