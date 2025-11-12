@@ -46,7 +46,7 @@ public class OracleDBUtil {
 
     public void testConnection() {
         try {
-            try (Connection conn = poolDataSource.getConnection();
+            try (Connection conn = getConnection();
                  Statement stmt = conn.createStatement();
                  ResultSet rs = stmt.executeQuery("SELECT 1 FROM DUAL")) {
                 if (rs.next()) {
