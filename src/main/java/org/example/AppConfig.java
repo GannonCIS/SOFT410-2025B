@@ -1,12 +1,7 @@
 package org.example;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -34,20 +29,18 @@ public final class AppConfig {
         return new ATM(auth, accounts, service);
     }
 
-    /** Build an ATM wired to the Oracle-backed repositories. */
-    public static ATM prodATM() {
-        try {
-            var auth = new InMemoryAuthRepo()
-                    .seed(952141, 191904)
-                    .seed(989947, 717976);
-            var dbUtil = new OracleDBUtil();
-            AccountRepository accounts = new JdbcAccountRepository(dbUtil);
-            AccountService service = new SimpleAccountService(accounts);
-            return new ATM(auth, accounts, service);
-        } catch (SQLException e) {
-            throw new IllegalStateException("Unable to initialise Oracle connection pool", e);
-        }
+    /** Build an ATM wired with JDBC repositories (use in production). */
+    public static ATM prodATM() throws SQLException {
+        OracleDBUtil dbUtil = new OracleDBUtil();
+
+        var auth = new JdbcAuthenticationRepository(dbUtil);
+        var accounts = new JdbcAccountRepository(dbUtil);
+        AccountService service = new org.example.SimpleAccountService(accounts);
+
+        return new ATM(auth, accounts, service);
     }
+
+    // ==================== In-memory repositories ====================
 
     /** In-memory Authentication (PINs as plain ints for demo). */
     static class InMemoryAuthRepo implements OptionMenu.AuthenticationRepository {
