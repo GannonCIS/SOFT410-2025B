@@ -49,7 +49,7 @@ public class OracleDBUtil {
     }
     public void testConnection() {
         try {
-            try (Connection conn = poolDataSource.getConnection();
+            try (Connection conn = getConnection();
                  Statement stmt = conn.createStatement();
                  ResultSet rs = stmt.executeQuery("SELECT 1 FROM DUAL")) {
                 if (rs.next()) {
@@ -60,6 +60,11 @@ public class OracleDBUtil {
             System.out.println("Could not connect to the database - SQLException occurred: " + e.getMessage());
         }
     }
+
+    public Connection getConnection() throws SQLException {
+        return poolDataSource.getConnection();
+    }
+
     public static void main(String[] args) {
         try {
             OracleDBUtil uds = new OracleDBUtil();

@@ -202,8 +202,4 @@ public class OptionMenu {
         boolean verify(int customerNumber, int pin);
     }
 
-    public interface AccountRepository {
-        List<Account> findAllByCustomer(int customerNumber);
-        Account findOneForCustomer(int customerNumber, int accountNumber);
-    }
 }
