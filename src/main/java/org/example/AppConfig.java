@@ -13,7 +13,9 @@ public final class AppConfig {
     private AppConfig() {
     }
 
-    /** Build an ATM wired with in-memory repositories and seed data (great for dev/testing). */
+    /**
+     * Build an ATM wired with in-memory repositories and seed data (great for dev/testing).
+     */
     public static ATM devATM() {
         var auth = new InMemoryAuthRepo()
                 .seed(952141, 191904)
@@ -29,7 +31,9 @@ public final class AppConfig {
         return new ATM(auth, accounts, service);
     }
 
-    /** Build an ATM wired with JDBC repositories (use in production). */
+    /**
+     * Build an ATM wired with JDBC repositories (use in production).
+     */
     public static ATM prodATM() throws SQLException {
         OracleDBUtil dbUtil = new OracleDBUtil();
 
@@ -42,7 +46,9 @@ public final class AppConfig {
 
     // ==================== In-memory repositories ====================
 
-    /** In-memory Authentication (PINs as plain ints for demo). */
+    /**
+     * In-memory Authentication (PINs as plain ints for demo).
+     */
     static class InMemoryAuthRepo implements OptionMenu.AuthenticationRepository {
         private final Map<Integer, Integer> pins = new ConcurrentHashMap<>();
 
@@ -57,7 +63,9 @@ public final class AppConfig {
         }
     }
 
-    /** In-memory Account repo (thread-safe maps). */
+    /**
+     * In-memory Account repo (thread-safe maps).
+     */
     static class InMemoryAccountRepo implements AccountRepository {
         private final Map<Integer, Account> byNo = new ConcurrentHashMap<>();
         private final Map<Integer, Set<Integer>> byCustomer = new ConcurrentHashMap<>();
@@ -100,24 +108,9 @@ public final class AppConfig {
             Account account = new Account(customerNumber, accountNumber, type, initialCents / 100.0);
             save(account);
             return accountNumber;
-        public TransferResult transfer(int customerNumber, int fromAccount, int toAccount, double amount) {
-            requirePositiveFinite(amount);
-            if (fromAccount == toAccount) throw new IllegalArgumentException("Cannot transfer to the same account");
 
-            var from = accounts.findOneForCustomer(customerNumber, fromAccount);
-            var to   = accounts.findOneForCustomer(customerNumber, toAccount);
-            if (from == null || to == null) throw new IllegalArgumentException("Account not found for this customer");
 
-            if (!from.withdraw(amount)) throw new IllegalStateException("Insufficient funds");
-            if (!to.deposit(amount)) { from.deposit(amount); throw new IllegalStateException("Deposit failed"); }
 
-            return new TransferResult(from.getAccountBalance(), to.getAccountBalance());
-        }
-
-        private static void requirePositiveFinite(double v) {
-            if (v <= 0.0 || Double.isNaN(v) || Double.isInfinite(v)) {
-                throw new IllegalArgumentException("Amount must be positive and finite");
-            }
         }
     }
 }
