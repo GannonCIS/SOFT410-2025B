@@ -1,14 +1,17 @@
 package org.example;
 
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Central place to wire dependencies.
- * Swap the in-memory repos with JDBC repos later without touching UI code.
+ * Swap the in-memory repos with JDBC repos without touching UI code.
  */
 public final class AppConfig {
-    private AppConfig() {}
+    private AppConfig() {
+    }
 
     /** Build an ATM wired with in-memory repositories and seed data (great for dev/testing). */
     public static ATM devATM() {
@@ -17,12 +20,22 @@ public final class AppConfig {
                 .seed(989947, 717976);
 
         var accounts = new InMemoryAccountRepo();
-        // seed a few accounts
         accounts.seed(new Account(952141, 1001, AccountType.CHECKING, 500.00));
         accounts.seed(new Account(952141, 1002, AccountType.SAVINGS, 1200.00));
         accounts.seed(new Account(989947, 2001, AccountType.CHECKING, 250.00));
 
-        var service = new SimpleAccountService(accounts);
+        AccountService service = new SimpleAccountService(accounts);
+
+        return new ATM(auth, accounts, service);
+    }
+
+    /** Build an ATM wired with JDBC repositories (use in production). */
+    public static ATM prodATM() throws SQLException {
+        OracleDBUtil dbUtil = new OracleDBUtil();
+
+        var auth = new JdbcAuthenticationRepository(dbUtil);
+        var accounts = new JdbcAccountRepository(dbUtil);
+        AccountService service = new org.example.SimpleAccountService(accounts);
 
         return new ATM(auth, accounts, service);
     }
@@ -31,69 +44,62 @@ public final class AppConfig {
 
     /** In-memory Authentication (PINs as plain ints for demo). */
     static class InMemoryAuthRepo implements OptionMenu.AuthenticationRepository {
-        private final Map<Integer, Integer> pins = new HashMap<>();
-        InMemoryAuthRepo seed(int customer, int pin) { pins.put(customer, pin); return this; }
-        @Override public boolean verify(int customerNumber, int pin) {
+        private final Map<Integer, Integer> pins = new ConcurrentHashMap<>();
+
+        InMemoryAuthRepo seed(int customer, int pin) {
+            pins.put(customer, pin);
+            return this;
+        }
+
+        @Override
+        public boolean verify(int customerNumber, int pin) {
             return Objects.equals(pins.get(customerNumber), pin);
         }
     }
 
     /** In-memory Account repo (thread-safe maps). */
-    static class InMemoryAccountRepo implements OptionMenu.AccountRepository {
+    static class InMemoryAccountRepo implements AccountRepository {
         private final Map<Integer, Account> byNo = new ConcurrentHashMap<>();
         private final Map<Integer, Set<Integer>> byCustomer = new ConcurrentHashMap<>();
+        private final AtomicInteger nextAccountNumber = new AtomicInteger(1000);
 
-        void seed(Account a) {
-            byNo.put(a.getAccountNumber(), a);
-            byCustomer.computeIfAbsent(a.getCustomerNumber(), k -> new LinkedHashSet<>())
-                    .add(a.getAccountNumber());
+        void seed(Account account) {
+            save(account);
+            nextAccountNumber.accumulateAndGet(account.getAccountNumber() + 1, Math::max);
         }
 
-        @Override public List<Account> findAllByCustomer(int customerNumber) {
+        @Override
+        public List<Account> findAllByCustomer(int customerNumber) {
             var nos = byCustomer.getOrDefault(customerNumber, Set.of());
             var list = new ArrayList<Account>(nos.size());
             for (int n : nos) {
-                var a = byNo.get(n);
-                if (a != null) list.add(a);
+                Account a = byNo.get(n);
+                if (a != null) {
+                    list.add(a);
+                }
             }
             return list;
         }
 
-        @Override public Account findOneForCustomer(int customerNumber, int accountNumber) {
-            var a = byNo.get(accountNumber);
-            return (a != null && a.getCustomerNumber() == customerNumber) ? a : null;
-        }
-    }
-
-    // ==================== Service (uses your existing AccountService interface) ====================
-
-    /** Simple service: validates, loads fresh from repo, mutates, returns new balances. */
-    static class SimpleAccountService implements AccountService {
-        private final OptionMenu.AccountRepository accounts;
-
-        SimpleAccountService(OptionMenu.AccountRepository accounts) {
-            this.accounts = Objects.requireNonNull(accounts);
+        @Override
+        public Account findOneForCustomer(int customerNumber, int accountNumber) {
+            Account account = byNo.get(accountNumber);
+            return (account != null && account.getCustomerNumber() == customerNumber) ? account : null;
         }
 
         @Override
-        public double deposit(int customerNumber, int accountNumber, double amount) {
-            requirePositiveFinite(amount);
-            var a = accounts.findOneForCustomer(customerNumber, accountNumber);
-            if (a == null) throw new IllegalArgumentException("Account not found for this customer");
-            if (!a.deposit(amount)) throw new IllegalArgumentException("Deposit rejected");
-            return a.getAccountBalance();
+        public void save(Account account) {
+            byNo.put(account.getAccountNumber(), account);
+            byCustomer.computeIfAbsent(account.getCustomerNumber(), k -> new LinkedHashSet<>())
+                    .add(account.getAccountNumber());
         }
 
         @Override
-        public double withdraw(int customerNumber, int accountNumber, double amount) {
-            requirePositiveFinite(amount);
-            var a = accounts.findOneForCustomer(customerNumber, accountNumber);
-            if (a == null) throw new IllegalArgumentException("Account not found for this customer");
-            if (!a.withdraw(amount)) throw new IllegalStateException("Insufficient funds");
-            return a.getAccountBalance();
-        }
-
-        @Override
+        public int create(int customerNumber, AccountType type, long initialCents) {
+            int accountNumber = nextAccountNumber.getAndIncrement();
+            Account account = new Account(customerNumber, accountNumber, type, initialCents / 100.0);
+            save(account);
+            return accountNumber;
         public TransferResult transfer(int customerNumber, int fromAccount, int toAccount, double amount) {
             requirePositiveFinite(amount);
             if (fromAccount == toAccount) throw new IllegalArgumentException("Cannot transfer to the same account");

@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'application' // Add this line to apply the application plugin
 }
 
 group = 'org.example'
@@ -12,8 +13,14 @@ repositories {
 dependencies {
     testImplementation platform('org.junit:junit-bom:5.9.1')
     testImplementation 'org.junit.jupiter:junit-jupiter'
+    implementation 'com.oracle.database.jdbc:ucp:21.9.0.0'
+    implementation 'com.oracle.database.jdbc:ojdbc8:21.9.0.0'
 }
 
 test {
     useJUnitPlatform()
+}
+
+application {
+    mainClassName = 'org.example.Main' // Define the main class for the application
 }
