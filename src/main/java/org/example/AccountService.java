@@ -8,9 +8,6 @@ import java.util.Objects;
  * - Loads the freshest state from the repository
  * - Applies domain changes (using Account methods)
  * - Persists immediately (no "save on logout")
- *
- * NOTE: This implementation assumes same-customer transfers. If you want cross-customer
- * transfers, add AccountRepository.findByAccountNumber(int) and use that for the destination.
  */
 public interface AccountService {
 
@@ -23,8 +20,6 @@ public interface AccountService {
     /** Transfer money between two accounts (same customer). Returns both new balances. */
     TransferResult transfer(int customerNumber, int fromAccount, int toAccount, double amount);
 
-    /** Create a new account for this customer and (optionally) seed an initial deposit. */
-    int openAccount(int customerNumber, AccountType type, double initialDeposit);
 
     final class TransferResult {
         public final double fromNewBalance;
@@ -121,20 +116,6 @@ final class SimpleAccountService implements AccountService {
         return new TransferResult(from.getAccountBalance(), to.getAccountBalance());
     }
 
-    @Override
-    public int openAccount(int customerNumber, AccountType type, double initialDeposit) {
-        if (type == null) throw new IllegalArgumentException("Account type is required");
-        if (Double.isNaN(initialDeposit) || Double.isInfinite(initialDeposit) || initialDeposit < 0.0) {
-            throw new IllegalArgumentException("Initial deposit must be finite and >= 0");
-        }
-
-        // Delegate creation to the repository (which allocates a new account number and persists it).
-        // Store money as cents in the DB; repo converts back to your Account(double) in finders.
-        long initialCents = toCents(initialDeposit);
-        int newAccountNumber = accounts.create(customerNumber, type, initialCents);
-
-        return newAccountNumber;
-    }
 
     // ---- helpers -------------------------------------------------------------------
 
