@@ -1,24 +1,38 @@
 pipeline {
-    agent any // Specifies that the pipeline can run on any available agent
+    agent any
 
     stages {
-        stage('Build') { // Defines a stage named 'Build'
+        stage('Build') {
             steps {
-                echo 'Building the project...' // Executes a simple shell command
-                // Add your build commands here, e.g., sh 'mvn clean install'
+                echo 'Start Building..'
+                sh './gradlew build'
+
             }
         }
-        stage('Test') { // Defines a stage named 'Test'
+        stage('Test') {
             steps {
-                echo 'Running tests...' // Executes a simple shell command
-                // Add your test commands here, e.g., sh 'mvn test'
-                // junit '**/target/*.xml' // Example for publishing JUnit test results
+                echo 'Starting Testing..'
+                sh './gradlew test'
             }
+            post {
+               always {
+                   echo 'Publishing Test Results...'
+
+               junit "build/reports/tests/test/*.xml"
+
+                publishHTML (target: [
+                   allowMissing: false,
+                   alwaysLinkToLastBuild: false,
+                   keepAll: true,
+                   reportDir: 'build/reports/tests/test',
+                   reportFiles: 'index.html',
+                   reportName: 'Test Report'
+               ])
+               }
         }
-        stage('Deploy') { // Defines a stage named 'Deploy'
+        stage('Deploy') {
             steps {
-                echo 'Deploying application...' // Executes a simple shell command
-                // Add your deployment commands here, e.g., sh 'scp target/app.jar user@server:/path'
+                echo 'Deploying....'
             }
         }
     }
