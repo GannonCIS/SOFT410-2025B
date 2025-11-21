@@ -31,7 +31,7 @@ class AccountTest {
 
         boolean ok = a.withdraw(150.00);
 
-        Assertions.assertFalse(false);
+        Assertions.assertFalse(ok);
         Assertions.assertEquals(100.00, a.getAccountBalance(), 0.0001);
     }
 }
